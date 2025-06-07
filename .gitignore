@@ -1,11 +1,21 @@
-Packages
-.build
-xcuserdata
+# SwiftPM / Vapor
+.build/
+.swiftpm/
+Package.resolved
+db.sqlite
+
+# Xcode
+*.xcuserstate
+*.xcuserdata/
 *.xcodeproj
 DerivedData/
 .DS_Store
-db.sqlite
-.swiftpm
+
+# Docker
+*.sock
+*.pid
+
+# Env files
 .env
 .env.*
 !.env.example
