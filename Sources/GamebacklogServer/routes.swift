@@ -1,14 +1,22 @@
 import Fluent
 import Vapor
 
+import Vapor
+
 func routes(_ app: Application) throws {
-    app.get { req async in
-        "It works!"
-    }
+    let user = UserController()
+    let game = GameController()
 
-    app.get("hello") { req async -> String in
-        "Hello, world!"
-    }
+    app.post("login", use: user.login)
 
-    try app.register(collection: TodoController())
+    let tokenProtected = app.grouped(UserToken.authenticator(), User.guardMiddleware())
+    let games = tokenProtected.grouped("games")
+
+    games.get(use: game.all)
+    games.post(use: game.create)
+    games.group(":id") { g in
+        g.get(use: game.byID)
+        g.patch(use: game.update)
+        g.delete(use: game.delete)
+    }
 }
