@@ -50,11 +50,11 @@ struct GameController {
         let user = try req.auth.require(User.self)
         guard let id = req.parameters.get("id", as: UUID.self),
               let existing = try await Game.find(id, on: req.db),
-              existing.$owner.id == user.id else {
+              existing.$owner.id == (try user.requireID()) else {
             throw Abort(.notFound)
         }
 
-        let incoming = try req.content.decode(Game.self)
+        let incoming = try req.content.decode(UpdateGameRequest.self)
         existing.title = incoming.title
         existing.platform = incoming.platform
         existing.coverURL = incoming.coverURL

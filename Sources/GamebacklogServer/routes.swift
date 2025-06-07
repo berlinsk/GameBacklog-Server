@@ -16,7 +16,7 @@ func routes(_ app: Application) throws {
     games.post(use: game.create)
     games.group(":id") { g in
         g.get(use: game.byID)
-        g.patch(use: game.update)
+        g.put(use: game.update)
         g.delete(use: game.delete)
     }
 }
