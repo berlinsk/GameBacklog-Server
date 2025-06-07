@@ -11,6 +11,7 @@ func routes(_ app: Application) throws {
 
     let tokenProtected = app.grouped(UserToken.authenticator(), User.guardMiddleware())
     let games = tokenProtected.grouped("games")
+    tokenProtected.delete("logout", use: user.logout)
 
     games.get(use: game.all)
     games.post(use: game.create)

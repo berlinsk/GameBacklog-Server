@@ -22,8 +22,19 @@ struct UserController {
             return try await token(for: user, req: req)
         }
     }
+    
+    func logout(req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        try await UserToken.query(on: req.db)
+            .filter(\.$user.$id == user.requireID())
+            .delete()
+        return .noContent
+    }
 
     private func token(for user: User, req: Request) async throws -> UserTokenResponse {
+        try await UserToken.query(on: req.db)
+            .filter(\.$user.$id == user.requireID())
+            .delete()
         let value = [UInt8].random(count: 16).base64
         let token = UserToken(value: value, userID: try user.requireID())
         try await token.save(on: req.db)
