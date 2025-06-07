@@ -11,9 +11,48 @@ import Fluent
 struct GameController {
     func all(req: Request) async throws -> [Game] {
         let user = try req.auth.require(User.self)
-        return try await Game.query(on: req.db)
+        let query = try Game.query(on: req.db)
             .filter(\.$owner.$id == user.requireID())
-            .all()
+
+        // status filter
+        if let statusRaw = req.query[String.self, at: "status"],
+           let status = GameStatus(rawValue: statusRaw) {
+            query.filter(\.$status == status)
+        }
+
+        // platform filter
+        if let platform = req.query[String.self, at: "platform"] {
+            query.filter(\.$platform == platform)
+        }
+
+        // find by name(register's not matter)
+        if let search = req.query[String.self, at: "search"] {
+            query.group(.or) { or in
+                or.filter(\.$title ~~ search)
+            }
+        }
+
+        // sort
+        let sortBy = req.query[String.self, at: "sortBy"] ?? "createdAt"
+        let order = req.query[String.self, at: "order"] ?? "desc"
+
+        switch sortBy {
+        case "title":
+            query.sort(\.$title, order == "desc" ? .descending : .ascending)
+        case "platform":
+            query.sort(\.$platform, order == "desc" ? .descending : .ascending)
+        case "rating":
+            query.sort(\.$rating, order == "desc" ? .descending : .ascending)
+        default:
+            query.sort(\.$createdAt, order == "desc" ? .descending : .ascending)
+        }
+
+        // pagination
+        let limit = req.query[Int.self, at: "limit"] ?? 50
+        let offset = req.query[Int.self, at: "offset"] ?? 0
+        query.range(offset..<(offset + limit))
+
+        return try await query.all()
     }
 
     func byID(req: Request) async throws -> Game {
