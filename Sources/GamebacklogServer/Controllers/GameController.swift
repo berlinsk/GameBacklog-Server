@@ -67,7 +67,8 @@ struct GameController {
         let genres = req.query[[String].self, at: "genre"]?.map { $0.lowercased() } ?? []
         if !genres.isEmpty {
             games = games.filter { game in
-                !Set(game.genres.map { $0.lowercased() }).isDisjoint(with: genres)
+                let lowercasedGenres = Set(game.genres.map { $0.lowercased() })
+                return genres.allSatisfy { lowercasedGenres.contains($0) }
             }
         }
         
