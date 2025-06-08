@@ -15,7 +15,10 @@ struct GameListResponse: Content {
 
 struct GameController {
     func all(req: Request) async throws -> GameListResponse {
-        let user = try req.auth.require(User.self)
+        guard let user = req.auth.get(User.self) else {
+            throw Abort(.unauthorized)
+        }
+
         var query = try Game.query(on: req.db)
             .filter(\.$owner.$id == user.requireID())
 
@@ -143,5 +146,22 @@ struct GameController {
         }
         try await game.delete(on: req.db)
         return .noContent
+    }
+}
+
+extension GameController: RouteCollection {
+    func boot(routes: any RoutesBuilder) throws {
+        let tokenProtected = routes
+            .grouped(UserToken.authenticator())
+            .grouped(User.guardMiddleware())
+
+        let games = tokenProtected.grouped("games")
+        games.get(use: all)
+        games.post(use: create)
+        games.group(":id") { g in
+            g.get(use: byID)
+            g.put(use: update)
+            g.delete(use: delete)
+        }
     }
 }
