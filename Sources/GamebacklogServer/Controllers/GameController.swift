@@ -8,26 +8,41 @@
 import Vapor
 import Fluent
 
+struct GameListResponse: Content {
+    let total: Int
+    let games: [Game]
+}
+
 struct GameController {
-    func all(req: Request) async throws -> [Game] {
+    func all(req: Request) async throws -> GameListResponse {
         let user = try req.auth.require(User.self)
-        let query = try Game.query(on: req.db)
+        var query = try Game.query(on: req.db)
             .filter(\.$owner.$id == user.requireID())
 
         // status filter
         if let statusRaw = req.query[String.self, at: "status"],
            let status = GameStatus(rawValue: statusRaw) {
-            query.filter(\.$status == status)
+            query = query.filter(\.$status == status)
         }
 
         // platform filter
         if let platform = req.query[String.self, at: "platform"] {
-            query.filter(\.$platform == platform)
+            query = query.filter(\.$platform == platform)
+        }
+        
+        // min rating filter
+        if let minRating = req.query[Int.self, at: "minRating"] {
+            query = query.filter(\.$rating >= minRating)
+        }
+        
+        // max rating filter
+        if let maxRating = req.query[Int.self, at: "maxRating"] {
+            query = query.filter(\.$rating <= maxRating)
         }
 
         // find by name(register's not matter)
         if let search = req.query[String.self, at: "search"] {
-            query.group(.or) { or in
+            query = query.group(.or) { or in
                 or.filter(\.$title ~~ search)
             }
         }
@@ -38,21 +53,26 @@ struct GameController {
 
         switch sortBy {
         case "title":
-            query.sort(\.$title, order == "desc" ? .descending : .ascending)
+            query = query.sort(\.$title, order == "desc" ? .descending : .ascending)
         case "platform":
-            query.sort(\.$platform, order == "desc" ? .descending : .ascending)
+            query = query.sort(\.$platform, order == "desc" ? .descending : .ascending)
         case "rating":
-            query.sort(\.$rating, order == "desc" ? .descending : .ascending)
+            query = query.sort(\.$rating, order == "desc" ? .descending : .ascending)
         default:
-            query.sort(\.$createdAt, order == "desc" ? .descending : .ascending)
+            query = query.sort(\.$createdAt, order == "desc" ? .descending : .ascending)
         }
+        
+        // general pagination number
+        let total = try await query.count()
 
         // pagination
         let limit = req.query[Int.self, at: "limit"] ?? 50
         let offset = req.query[Int.self, at: "offset"] ?? 0
-        query.range(offset..<(offset + limit))
+        query = query.range(offset..<(offset + limit))
+        
+        let games = try await query.all()
 
-        return try await query.all()
+        return GameListResponse(total: total, games: games)
     }
 
     func byID(req: Request) async throws -> Game {
