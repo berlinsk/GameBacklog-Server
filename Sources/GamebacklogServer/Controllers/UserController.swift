@@ -8,21 +8,45 @@
 import Vapor
 import Fluent
 
-struct UserController {
-    func login(req: Request) async throws -> UserTokenResponse {
-        let data = try req.content.decode(LoginRequest.self)
+struct UserTokenResponse: Content {
+    let username: String
+    let token: String
+}
 
-        if let user = try await User.query(on: req.db)
-            .filter(\.$username == data.username)
-            .first() {
-            return try await token(for: user, req: req)
-        } else {
-            let user = User(username: data.username)
-            try await user.save(on: req.db)
-            return try await token(for: user, req: req)
-        }
+struct LoginRequest: Content {
+    let username: String
+    let password: String
+}
+
+struct UserController: RouteCollection {
+
+    func boot(routes: any RoutesBuilder) throws {
+        routes.post("login", use: login)
+        routes.grouped(UserToken.authenticator(), User.guardMiddleware())
+              .delete("logout", use: logout)
     }
-    
+
+    func login(req: Request) async throws -> UserTokenResponse {
+        let payload = try req.content.decode(LoginRequest.self)
+
+        // find user
+        guard let user = try await User
+            .query(on: req.db)
+            .filter(\.$username == payload.username)
+            .first()
+        else {
+            throw Abort(.unauthorized, reason: "Wrong credentials")
+        }
+
+        // password
+        // create/save token
+        let rawToken = [UInt8].random(count: 32).base64
+        let token = UserToken(value: rawToken, userID: try user.requireID())
+        try await token.save(on: req.db)
+
+        return UserTokenResponse(username: user.username, token: rawToken)
+    }
+
     func logout(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)
         try await UserToken.query(on: req.db)
@@ -30,23 +54,4 @@ struct UserController {
             .delete()
         return .noContent
     }
-
-    private func token(for user: User, req: Request) async throws -> UserTokenResponse {
-        try await UserToken.query(on: req.db)
-            .filter(\.$user.$id == user.requireID())
-            .delete()
-        let value = [UInt8].random(count: 16).base64
-        let token = UserToken(value: value, userID: try user.requireID())
-        try await token.save(on: req.db)
-        return UserTokenResponse(username: user.username, token: value)
-    }
-}
-
-struct LoginRequest: Content {
-    var username: String
-}
-
-struct UserTokenResponse: Content {
-    var username: String
-    var token: String
 }
