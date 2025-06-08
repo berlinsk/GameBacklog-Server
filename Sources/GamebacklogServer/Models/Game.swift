@@ -20,6 +20,7 @@ final class Game: Model, Content {
 
     @ID(key: .id) var id: UUID?
     @Field(key: "title") var title: String
+    @Field(key: "genres") var genres: [String]
     @Field(key: "platform") var platform: String
     @Field(key: "cover_url") var coverURL: String?
     @Enum(key: "status") var status: GameStatus
@@ -32,6 +33,7 @@ final class Game: Model, Content {
 
     init(id: UUID? = nil,
          title: String,
+         genres: [String],
          platform: String,
          coverURL: String?,
          status: GameStatus,
@@ -40,6 +42,7 @@ final class Game: Model, Content {
          ownerID: User.IDValue) {
         self.id = id
         self.title = title
+        self.genres = genres
         self.platform = platform
         self.coverURL = coverURL
         self.status = status

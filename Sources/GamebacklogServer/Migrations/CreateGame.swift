@@ -12,6 +12,7 @@ struct CreateGame: Migration {
         db.schema("games")
             .id()
             .field("title", .string, .required)
+            .field("genres", .array(of: .string), .required)
             .field("platform", .string, .required)
             .field("cover_url", .string)
             .field("status", .string, .required)

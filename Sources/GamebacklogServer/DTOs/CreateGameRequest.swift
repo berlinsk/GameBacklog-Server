@@ -9,6 +9,7 @@ import Vapor
 
 struct CreateGameRequest: Content {
     var title: String
+    var genres: [String]
     var platform: String
     var coverURL: String?
     var status: GameStatus

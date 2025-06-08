@@ -8,6 +8,7 @@ import Vapor
 
 struct UpdateGameRequest: Content {
     let title: String
+    let genres: [String]
     let platform: String
     let coverURL: String?
     let status: GameStatus

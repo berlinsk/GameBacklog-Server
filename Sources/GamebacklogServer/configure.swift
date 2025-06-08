@@ -8,6 +8,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateUser())
     app.migrations.add(CreateGame())
     app.migrations.add(CreateUserToken())
+    app.migrations.add(AddGenresToGames())
 
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
     app.middleware.use(ErrorMiddleware.default(environment: app.environment))

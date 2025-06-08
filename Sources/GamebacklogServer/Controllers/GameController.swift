@@ -62,15 +62,21 @@ struct GameController {
             query = query.sort(\.$createdAt, order == "desc" ? .descending : .ascending)
         }
         
+        // genres filter
+        var games = try await query.all()
+        if let genre = req.query[String.self, at: "genre"]?.lowercased() {
+            games = games.filter { game in
+            game.genres.contains { $0.lowercased().contains(genre) }
+            }
+        }
+        
         // general pagination number
-        let total = try await query.count()
+        let total = games.count
 
         // pagination
         let limit = req.query[Int.self, at: "limit"] ?? 50
         let offset = req.query[Int.self, at: "offset"] ?? 0
-        query = query.range(offset..<(offset + limit))
-        
-        let games = try await query.all()
+        let paginated = Array(games.dropFirst(offset).prefix(limit))
 
         return GameListResponse(total: total, games: games)
     }
@@ -93,6 +99,7 @@ struct GameController {
 
         let game = Game(
             title: input.title,
+            genres: input.genres,
             platform: input.platform,
             coverURL: input.coverURL,
             status: input.status,
@@ -115,6 +122,7 @@ struct GameController {
 
         let incoming = try req.content.decode(UpdateGameRequest.self)
         existing.title = incoming.title
+        existing.genres = incoming.genres
         existing.platform = incoming.platform
         existing.coverURL = incoming.coverURL
         existing.status = incoming.status
