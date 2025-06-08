@@ -12,6 +12,7 @@ struct CreateUser: Migration {
         db.schema("users")
             .id()
             .field("username", .string, .required)
+            .field("passwordHash", .string, .required)
             .unique(on: "username")
             .create()
     }

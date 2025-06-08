@@ -18,12 +18,32 @@ struct LoginRequest: Content {
     let password: String
 }
 
+struct RegisterRequest: Content {
+    let username: String
+    let password: String
+}
+
 struct UserController: RouteCollection {
 
     func boot(routes: any RoutesBuilder) throws {
         routes.post("login", use: login)
         routes.grouped(UserToken.authenticator(), User.guardMiddleware())
               .delete("logout", use: logout)
+    }
+    
+    func register(req: Request) async throws -> UserTokenResponse {
+        let data = try req.content.decode(RegisterRequest.self)
+
+        let hash = try Bcrypt.hash(data.password)
+
+        let user = User(username: data.username, passwordHash: hash)
+        try await user.save(on: req.db)
+
+        let rawToken = [UInt8].random(count: 32).base64
+        let token = UserToken(value: rawToken, userID: try user.requireID())
+        try await token.save(on: req.db)
+
+        return UserTokenResponse(username: user.username, token: rawToken)
     }
 
     func login(req: Request) async throws -> UserTokenResponse {

@@ -13,11 +13,13 @@ final class User: Model, Content, Authenticatable {
 
     @ID(key: .id) var id: UUID?
     @Field(key: "username") var username: String
+    @Field(key: "passwordHash") var passwordHash: String
 
     init() {}
 
-    init(id: UUID? = nil, username: String) {
+    init(id: UUID? = nil, username: String, passwordHash: String) {
         self.id = id
         self.username = username
+        self.passwordHash = passwordHash
     }
 }
