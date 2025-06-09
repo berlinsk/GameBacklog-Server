@@ -3,6 +3,7 @@
 .swiftpm/
 Package.resolved
 db.sqlite
+db.sqlite3
 
 # Xcode
 *.xcuserstate

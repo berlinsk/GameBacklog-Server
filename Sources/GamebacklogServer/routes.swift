@@ -1,8 +1,6 @@
 import Fluent
 import Vapor
 
-import Vapor
-
 func routes(_ app: Application) throws {
     let user = UserController()
     app.post("register", use: user.register)

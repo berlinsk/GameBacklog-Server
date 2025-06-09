@@ -59,9 +59,21 @@ struct UserController: RouteCollection {
         }
 
         // password
-        // create/save token
+        guard try Bcrypt.verify(payload.password, created: user.passwordHash) else {
+            throw Abort(.unauthorized, reason: "Wrong credentials")
+        }
+        
+        
+        let userID = try user.requireID()
+
+        // delete old tokens
+        try await UserToken.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .delete()
+
+        // create token
         let rawToken = [UInt8].random(count: 32).base64
-        let token = UserToken(value: rawToken, userID: try user.requireID())
+        let token = UserToken(value: rawToken, userID: userID)
         try await token.save(on: req.db)
 
         return UserTokenResponse(username: user.username, token: rawToken)

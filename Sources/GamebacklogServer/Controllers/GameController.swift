@@ -119,10 +119,15 @@ struct GameController {
 
     func update(req: Request) async throws -> Game {
         let user = try req.auth.require(User.self)
+        let userID = try user.requireID()
+
         guard let id = req.parameters.get("id", as: UUID.self),
-              let existing = try await Game.find(id, on: req.db),
-              existing.$owner.id == (try user.requireID()) else {
+              let existing = try await Game.find(id, on: req.db) else {
             throw Abort(.notFound)
+        }
+
+        if existing.$owner.id != userID {
+            throw Abort(.forbidden, reason: "You do not own this game")
         }
 
         let incoming = try req.content.decode(UpdateGameRequest.self)
@@ -158,10 +163,10 @@ extension GameController: RouteCollection {
         let games = tokenProtected.grouped("games")
         games.get(use: all)
         games.post(use: create)
-        games.group(":id") { g in
-            g.get(use: byID)
-            g.put(use: update)
-            g.delete(use: delete)
-        }
+
+        let single = games.grouped(":id")
+        single.get(use: byID)
+        single.put(use: update)
+        single.delete(use: delete)
     }
 }
